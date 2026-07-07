@@ -364,6 +364,14 @@ body {
   .stats { grid-template-columns: 1fr 1fr; }
 }
 </style>
+
+<script>
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let r of registrations) { r.unregister(); }
+  });
+}
+</script>
 </head>
 <body>
 
@@ -789,19 +797,9 @@ function importCSV(e){
   ]
 }
 
-const CACHE = 'skinvity-v6';
-
-self.addEventListener('install', e => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', e => {
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+// This service worker unregisters itself to clean up
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', () => {
+  self.registration.unregister();
+  self.clients.matchAll().then(clients => clients.forEach(c => c.navigate(c.url)));
 });
