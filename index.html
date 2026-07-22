@@ -819,32 +819,35 @@ function switchDashTab(tab, btn) {
 
 function renderCampanas() {
   const el = document.getElementById('campanas-content');
-  // Show most recent period's campaign image
   const periods = [...S.periods].reverse();
+  let html = '';
   let found = false;
   for (const p of periods) {
     if (p.campana) {
-      // Convert Google Drive share link to direct image URL
-      let url = p.campana;
-      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      if (match) {
-        url = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      let url = p.campana.trim();
+      // Try multiple Google Drive URL formats
+      const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (idMatch) {
+        const id = idMatch[1];
+        // Use thumbnail endpoint which works for public files
+        url = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
       }
-      el.innerHTML = `
-        <div style="margin-bottom:1rem">
-          <p class="label" style="margin-bottom:.75rem">${p.label}</p>
-          <img src="${url}" alt="Campaña ${p.label}" 
-               style="width:100%;border:1px solid var(--border);display:block"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
-          <div style="display:none;padding:1.5rem;text-align:center;color:var(--ink-faint);font-size:13px;border:1px solid var(--border)">
-            No se pudo cargar la imagen. Comprueba que el enlace de Drive es público.
-          </div>
-        </div>`;
+      html += `<div style="margin-bottom:2rem">
+        <p class="label" style="margin-bottom:.75rem">${p.label}</p>
+        <img src="${url}" alt="Campaña ${p.label}" 
+             style="width:100%;border:1px solid var(--border);display:block;max-height:80vh;object-fit:contain"
+             onerror="this.parentElement.querySelector('.err-msg').style.display='block';this.style.display='none'"/>
+        <div class="err-msg" style="display:none;padding:1.5rem;text-align:center;color:var(--ink-faint);font-size:13px;border:1px solid var(--border)">
+          No se pudo cargar la imagen.<br>
+          <a href="${p.campana}" target="_blank" style="color:var(--ink);font-size:12px;margin-top:8px;display:inline-block">Abrir en Google Drive →</a>
+        </div>
+      </div>`;
       found = true;
-      break;
     }
   }
-  if (!found) {
+  if (found) {
+    el.innerHTML = html;
+  } else {
     el.innerHTML = '<div style="text-align:center;padding:3rem 1.5rem;color:var(--ink-faint)"><div style="font-size:13px;letter-spacing:0.06em">No hay campañas publicadas todavía.</div></div>';
   }
 }
