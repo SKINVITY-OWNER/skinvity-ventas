@@ -825,12 +825,13 @@ function renderCampanas() {
   for (const p of periods) {
     if (p.campana) {
       let url = p.campana.trim();
-      // Try multiple Google Drive URL formats
-      const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      if (idMatch) {
-        const id = idMatch[1];
-        // Use thumbnail endpoint which works for public files
-        url = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+      // Only convert if it's a Google Drive URL (not base64)
+      if (!url.startsWith('data:')) {
+        const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (idMatch) {
+          const id = idMatch[1];
+          url = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+        }
       }
       html += `<div style="margin-bottom:2rem">
         <p class="label" style="margin-bottom:.75rem">${p.label}</p>
