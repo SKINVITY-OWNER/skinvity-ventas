@@ -416,10 +416,18 @@ if('serviceWorker' in navigator) {
         <div style="font-size:10px;letter-spacing:0.16em;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-top:2px">Portal de influencers</div>
       </div>
     </div>
-    <div class="period-nav">
-      <p class="label period-nav-label">Periodo</p>
-      <div class="period-tabs" id="period-tabs"></div>
+    <!-- DASH TABS -->
+    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:2rem">
+      <button class="dash-tab on" onclick="switchDashTab('ventas',this)" style="padding:10px 16px;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-faint);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:'Inter',sans-serif;transition:all .15s" id="dtab-ventas">Mis ventas</button>
+      <button class="dash-tab" onclick="switchDashTab('campanas',this)" style="padding:10px 16px;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-faint);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:'Inter',sans-serif;transition:all .15s" id="dtab-campanas">Campañas</button>
     </div>
+
+    <!-- VENTAS PANEL -->
+    <div id="dpane-ventas">
+      <div class="period-nav">
+        <p class="label period-nav-label">Periodo</p>
+        <div class="period-tabs" id="period-tabs"></div>
+      </div>
     <div class="stats">
       <div class="stat">
         <p class="label stat-label">Pedidos</p>
@@ -439,6 +447,17 @@ if('serviceWorker' in navigator) {
       </div>
       <div id="d-list"></div>
     </div>
+    </div><!-- end dpane-ventas -->
+
+    <!-- CAMPAÑAS PANEL -->
+    <div id="dpane-campanas" style="display:none">
+      <div id="campanas-content">
+        <div style="text-align:center;padding:3rem 1.5rem;color:var(--ink-faint)">
+          <div style="font-size:13px;letter-spacing:0.06em">No hay campañas publicadas para este mes.</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -471,6 +490,11 @@ if('serviceWorker' in navigator) {
       <div style="margin-top:2rem">
         <p class="label" style="margin-bottom:1rem">Periodos cargados</p>
         <div id="periods-list"></div>
+      </div>
+      <div style="margin-top:2rem">
+        <p class="label" style="margin-bottom:1rem">Imagen de campaña por periodo</p>
+        <div class="upload-hint">Sube la imagen a <strong>Google Drive</strong> → clic derecho → "Obtener enlace" → asegúrate de que cualquiera con el enlace puede verla → pega el enlace aquí.</div>
+        <div id="campana-form" style="display:flex;flex-direction:column;gap:12px"></div>
       </div>
     </div>
 
@@ -722,7 +746,7 @@ function switchTab(tab,btn){
   document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
   document.getElementById('t-'+tab).classList.add('on');btn.classList.add('on');
-  if(tab==='csv')renderPeriodsList();
+  if(tab==='csv'){renderPeriodsList();renderCampanaForm();}
 }
 
 function importCSV(e){
@@ -779,6 +803,79 @@ function importCSV(e){
 
 
 
+
+// ── DASH TABS ──────────────────────────────────────────────
+function switchDashTab(tab, btn) {
+  document.querySelectorAll('.dash-tab').forEach(t => {
+    t.style.color = 'var(--ink-faint)';
+    t.style.borderBottomColor = 'transparent';
+  });
+  btn.style.color = 'var(--ink)';
+  btn.style.borderBottomColor = 'var(--ink)';
+  document.getElementById('dpane-ventas').style.display = tab === 'ventas' ? 'block' : 'none';
+  document.getElementById('dpane-campanas').style.display = tab === 'campanas' ? 'block' : 'none';
+  if (tab === 'campanas') renderCampanas();
+}
+
+function renderCampanas() {
+  const el = document.getElementById('campanas-content');
+  // Show most recent period's campaign image
+  const periods = [...S.periods].reverse();
+  let found = false;
+  for (const p of periods) {
+    if (p.campana) {
+      // Convert Google Drive share link to direct image URL
+      let url = p.campana;
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) {
+        url = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+      el.innerHTML = `
+        <div style="margin-bottom:1rem">
+          <p class="label" style="margin-bottom:.75rem">${p.label}</p>
+          <img src="${url}" alt="Campaña ${p.label}" 
+               style="width:100%;border:1px solid var(--border);display:block"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+          <div style="display:none;padding:1.5rem;text-align:center;color:var(--ink-faint);font-size:13px;border:1px solid var(--border)">
+            No se pudo cargar la imagen. Comprueba que el enlace de Drive es público.
+          </div>
+        </div>`;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    el.innerHTML = '<div style="text-align:center;padding:3rem 1.5rem;color:var(--ink-faint)"><div style="font-size:13px;letter-spacing:0.06em">No hay campañas publicadas todavía.</div></div>';
+  }
+}
+
+// ── CAMPAIGN ADMIN ──────────────────────────────────────────
+function renderCampanaForm() {
+  const el = document.getElementById('campana-form');
+  if (!el) return;
+  el.innerHTML = S.periods.map(p => `
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:12px;font-weight:500;min-width:120px;color:var(--ink-soft)">${p.label}</span>
+      <input type="text" placeholder="Enlace de Google Drive..." 
+             value="${p.campana || ''}"
+             onchange="saveCampana('${p.id}', this.value)"
+             style="flex:1;padding:8px 10px;border:1px solid var(--border-med);font-size:13px;font-family:Inter,sans-serif;outline:none;background:var(--white);color:var(--ink)"/>
+      ${p.campana ? `<span style="font-size:18px">✓</span>` : ''}
+    </div>`
+  ).join('');
+}
+
+function saveCampana(periodId, url) {
+  const period = S.periods.find(p => p.id === periodId);
+  if (period) {
+    period.campana = url.trim();
+    save(S);
+    renderCampanaForm();
+    const msg = document.getElementById('csv-msg');
+    msg.textContent = '✓ Imagen de campaña guardada.';
+    setTimeout(() => msg.textContent = '', 3000);
+  }
+}
 </script>
 </body>
 </html>
