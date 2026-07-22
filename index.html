@@ -853,26 +853,34 @@ function renderCampanas() {
 function renderCampanaForm() {
   const el = document.getElementById('campana-form');
   if (!el) return;
-  el.innerHTML = S.periods.map(p => `
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:12px;font-weight:500;min-width:120px;color:var(--ink-soft)">${p.label}</span>
-      <input type="text" placeholder="Enlace de Google Drive..." 
-             value="${p.campana || ''}"
-             onchange="saveCampana('${p.id}', this.value)"
-             style="flex:1;padding:8px 10px;border:1px solid var(--border-med);font-size:13px;font-family:Inter,sans-serif;outline:none;background:var(--white);color:var(--ink)"/>
-      ${p.campana ? `<span style="font-size:18px">✓</span>` : ''}
-    </div>`
-  ).join('');
+  if (!S.periods || !S.periods.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--ink-faint)">Primero sube un CSV para que aparezcan los periodos.</p>';
+    return;
+  }
+  el.innerHTML = S.periods.map(p => {
+    const val = p.campana || '';
+    return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:500;min-width:110px;color:var(--ink-soft);flex-shrink:0">${p.label}</span>
+      <input type="text" placeholder="Pega aquí el enlace de Google Drive..." 
+             value="${val}"
+             id="campana-inp-${p.id}"
+             style="flex:1;min-width:200px;padding:9px 11px;border:1px solid var(--border-med);font-size:13px;font-family:Inter,sans-serif;outline:none;background:var(--white);color:var(--ink)"/>
+      <button onclick="saveCampana('${p.id}')" style="padding:8px 14px;background:var(--ink);color:#fff;border:none;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">${val ? '✓ Guardado' : 'Guardar'}</button>
+    </div>`;
+  }).join('');
 }
 
-function saveCampana(periodId, url) {
+function saveCampana(periodId) {
+  const inp = document.getElementById('campana-inp-' + periodId);
+  if (!inp) return;
+  const url = inp.value.trim();
   const period = S.periods.find(p => p.id === periodId);
   if (period) {
-    period.campana = url.trim();
+    period.campana = url;
     save(S);
     renderCampanaForm();
     const msg = document.getElementById('csv-msg');
-    msg.textContent = '✓ Imagen de campaña guardada.';
+    msg.textContent = '✓ Enlace de campaña guardado para ' + period.label;
     setTimeout(() => msg.textContent = '', 3000);
   }
 }
